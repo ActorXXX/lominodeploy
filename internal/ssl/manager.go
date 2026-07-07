@@ -4,12 +4,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"io"
 	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -61,9 +63,9 @@ func EnableLetsEncrypt(domain, certsDir string, logFn func(line, level string)) 
 		}
 	}()
 
-	// Intentar obtener el certificado
+	// Intentar obtener el certificado usando tls.ClientHelloInfo
 	tlsCfg := m.TLSConfig()
-	_, err := tlsCfg.GetCertificate(&tls_hello{ServerName: domain})
+	_, err := tlsCfg.GetCertificate(&tls.ClientHelloInfo{ServerName: domain})
 	srv.Close()
 
 	if err != nil {
@@ -121,7 +123,7 @@ func GenerateSelfSigned(certsDir, ip string) (*CertPaths, error) {
 		return nil, err
 	}
 
-	template := x509.Certificate{
+	tmpl := x509.Certificate{
 		SerialNumber: big.NewInt(time.Now().Unix()),
 		Subject:      pkix.Name{Organization: []string{"LominoDeploy Self-Signed"}},
 		NotBefore:    time.Now(),
@@ -131,10 +133,12 @@ func GenerateSelfSigned(certsDir, ip string) (*CertPaths, error) {
 	}
 
 	if ip != "" {
-		template.IPAddresses = []interface{}{ip} // simplificado
+		if parsedIP := net.ParseIP(ip); parsedIP != nil {
+			tmpl.IPAddresses = []net.IP{parsedIP}
+		}
 	}
 
-	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	certDER, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, &priv.PublicKey, priv)
 	if err != nil {
 		return nil, err
 	}
@@ -153,10 +157,3 @@ func GenerateSelfSigned(certsDir, ip string) (*CertPaths, error) {
 
 	return &CertPaths{CertFile: certFile, KeyFile: keyFile}, nil
 }
-
-// tls_hello es un helper interno para triggear GetCertificate.
-type tls_hello struct {
-	ServerName string
-}
-
-func (h *tls_hello) GetServerName() string { return h.ServerName }

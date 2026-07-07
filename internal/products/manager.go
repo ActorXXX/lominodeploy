@@ -202,7 +202,7 @@ func composeTemplate(productID string) string {
     environment:
       POSTGRES_DB: {{.ID}}
       POSTGRES_USER: {{.ID}}
-      POSTGRES_PASSWORD: ${ + `{DB_PASSWORD}` + `}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     healthcheck:

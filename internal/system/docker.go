@@ -30,8 +30,8 @@ func CheckDocker() DockerStatus {
 		return DockerStatus{Installed: true, Overall: "error"}
 	}
 
-	major, minor := parseDockerVersion(version)
-	versionOK := major > 24 || (major == 24)
+	major, _ := parseDockerVersion(version)
+	versionOK := major >= 24
 
 	daemonOut := exec.Command("docker", "info")
 	daemonRunning := daemonOut.Run() == nil
