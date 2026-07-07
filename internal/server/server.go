@@ -140,11 +140,11 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("POST /api/updater/apply", s.handleUpdaterApply)
 
 	// WebSocket — deploy en vivo
-	s.mux.HandleFunc("/ws/deploy/{id}", s.handleDeployWS)
+	s.mux.HandleFunc("GET /ws/deploy/{id}", s.handleDeployWS)
 
 	// WebSocket — logs de producto
-	s.mux.HandleFunc("/ws/logs/{id}", s.handleLogsWS)
+	s.mux.HandleFunc("GET /ws/logs/{id}", s.handleLogsWS)
 
 	// WebSocket — actualización de producto
-	s.mux.HandleFunc("/ws/update/{id}", s.handleProductUpdate)
+	s.mux.HandleFunc("GET /ws/update/{id}", s.handleProductUpdate)
 }
