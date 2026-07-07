@@ -48,6 +48,9 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Compilando versión: $VERSION"
 
+      - name: Descargar dependencias
+        run: go mod tidy
+
       - name: Compilar
         env:
           GOOS: ${{ matrix.goos }}
