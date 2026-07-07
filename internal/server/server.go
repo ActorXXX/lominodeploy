@@ -102,7 +102,7 @@ func (s *Server) render(w http.ResponseWriter, name string, data interface{}) {
 func (s *Server) registerRoutes() {
 	// Archivos estáticos embebidos
 	staticFS, _ := fs.Sub(s.webFS, "web/static")
-	s.mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
+	s.mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))))
 
 	// Páginas
 	s.mux.HandleFunc("GET /", s.handleRoot)
