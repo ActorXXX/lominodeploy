@@ -1,7 +1,9 @@
 package products
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os/exec"
 	"strings"
 	"time"
@@ -162,4 +164,19 @@ func runComposeWithLog(basePath, cmd string, logFn func(line, level string)) err
 	go streamLines(stdout, logFn, "info")
 	go streamLines(stderr, logFn, "warn")
 	return c.Wait()
+}
+
+func streamLines(r io.Reader, logFn func(line, level string), defaultLevel string) {
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := scanner.Text()
+		level := defaultLevel
+		lower := strings.ToLower(line)
+		if strings.Contains(lower, "error") || strings.Contains(lower, "fatal") {
+			level = "error"
+		} else if strings.Contains(lower, "warn") {
+			level = "warn"
+		}
+		logFn(line, level)
+	}
 }
