@@ -1,0 +1,23 @@
+# Binarios compilados
+lominodeploy
+lominodeploy-linux-amd64
+lominodeploy-linux-arm64
+
+# Archivos de configuración con datos sensibles
+*.pem
+*.key
+*.p12
+config.toml
+
+# Entorno de desarrollo
+.env
+.env.local
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Go
+vendor/

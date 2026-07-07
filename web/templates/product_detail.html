@@ -1,0 +1,330 @@
+{{template "layout" .}}
+
+{{define "title"}}{{.Product.Name}} — LominoDeploy{{end}}
+
+{{define "body"}}
+{{template "sidebar" (dict "Version" .Version "Page" "")}}
+
+<div class="main-content">
+  <div class="topbar d-flex align-items-center gap-3">
+    <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Dashboard
+    </a>
+    <div class="flex-grow-1">
+      <h6 class="mb-0 fw-semibold text-white">{{.Product.Name}}</h6>
+      <small class="text-secondary font-monospace">v{{.Product.Version}} · {{.Product.BasePath}}</small>
+    </div>
+    <!-- Acciones -->
+    <div class="d-flex gap-2">
+      {{if eq .Status "running"}}
+      <button class="btn btn-outline-danger btn-sm" onclick="stopProduct()">
+        <i class="bi bi-stop-fill me-1"></i>Detener
+      </button>
+      <button class="btn btn-outline-warning btn-sm" id="btn-update" onclick="openUpdateModal()">
+        <i class="bi bi-arrow-up-circle me-1"></i>Actualizar
+      </button>
+      {{else}}
+      <button class="btn btn-outline-success btn-sm" onclick="startProduct()">
+        <i class="bi bi-play-fill me-1"></i>Iniciar
+      </button>
+      {{end}}
+      <button class="btn btn-outline-danger btn-sm" onclick="removeProduct()" title="Eliminar producto">
+        <i class="bi bi-trash3"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="p-4">
+    <div class="row g-4">
+
+      <!-- Columna principal -->
+      <div class="col-lg-8">
+
+        <!-- Estado -->
+        <div class="card mb-4">
+          <div class="card-body p-4">
+            <div class="row align-items-center">
+              <div class="col-auto">
+                {{if eq .Status "running"}}
+                <div class="d-flex align-items-center justify-content-center rounded-3"
+                     style="width:56px;height:56px;background:#16a34a22;">
+                  <i class="bi bi-circle-fill text-success fs-4 animate-pulse"></i>
+                </div>
+                {{else}}
+                <div class="d-flex align-items-center justify-content-center rounded-3"
+                     style="width:56px;height:56px;background:#dc262622;">
+                  <i class="bi bi-circle-fill text-danger fs-4"></i>
+                </div>
+                {{end}}
+              </div>
+              <div class="col">
+                <div class="fw-semibold text-white">
+                  {{if eq .Status "running"}}En ejecución{{else}}Detenido{{end}}
+                </div>
+                <div class="text-secondary small">
+                  {{if .Product.Domain}}
+                    Acceso: <a href="{{if .Product.SSLEnabled}}https{{else}}http{{end}}://{{.Product.Domain}}"
+                               target="_blank" class="text-info">
+                      {{if .Product.SSLEnabled}}https{{else}}http{{end}}://{{.Product.Domain}}
+                    </a>
+                  {{else}}
+                    Sin dominio configurado
+                  {{end}}
+                </div>
+              </div>
+              <div class="col-auto text-secondary small">
+                Instalado: {{.Product.InstalledAt.Format "02/01/2006"}}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs en vivo -->
+        <div class="card mb-4">
+          <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+            <h6 class="mb-0 fw-semibold"><i class="bi bi-terminal me-2"></i>Logs en vivo</h6>
+            <button class="btn btn-outline-secondary btn-sm" onclick="toggleLogs()" id="btn-logs">
+              <i class="bi bi-play me-1"></i>Conectar
+            </button>
+          </div>
+          <div class="card-body p-0">
+            <div class="log-terminal rounded-0 rounded-bottom" id="log-output" style="height:300px;">
+              <span class="text-secondary">Haz clic en "Conectar" para ver los logs en tiempo real.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Columna lateral -->
+      <div class="col-lg-4">
+
+        <!-- SSL -->
+        <div class="card mb-4">
+          <div class="card-header px-4 py-3">
+            <h6 class="mb-0 fw-semibold"><i class="bi bi-shield-check me-2"></i>SSL / HTTPS</h6>
+          </div>
+          <div class="card-body p-4">
+            {{if .Product.SSLEnabled}}
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <i class="bi bi-shield-fill-check text-success fs-5"></i>
+              <div>
+                <div class="text-white small fw-medium">SSL activo</div>
+                <div class="text-secondary" style="font-size:.75rem;">Modo: {{.Product.SSLMode}}</div>
+              </div>
+            </div>
+            {{else}}
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <i class="bi bi-shield-exclamation text-warning fs-5"></i>
+              <div>
+                <div class="text-white small fw-medium">Sin SSL</div>
+                <div class="text-secondary" style="font-size:.75rem;">HTTP únicamente</div>
+              </div>
+            </div>
+
+            {{if .Product.Domain}}
+            <div class="border rounded p-3 mb-3" style="border-color:#2a2a35!important;">
+              <p class="text-secondary small mb-2 fw-medium">Prerrequisitos Let's Encrypt:</p>
+              <div class="d-flex align-items-center gap-2 mb-1" style="font-size:.8rem;">
+                <i class="bi bi-{{if .SSLCheck.DNSResolves}}check-circle-fill text-success{{else}}x-circle-fill text-danger{{end}}"></i>
+                <span class="text-light">DNS apunta a este servidor</span>
+              </div>
+              <div class="d-flex align-items-center gap-2 mb-2" style="font-size:.8rem;">
+                <i class="bi bi-{{if .SSLCheck.Port80OK}}check-circle-fill text-success{{else}}x-circle-fill text-danger{{end}}"></i>
+                <span class="text-light">Puerto 80 accesible desde internet</span>
+              </div>
+              {{if not .SSLCheck.DNSResolves}}
+              <div class="text-secondary" style="font-size:.72rem;">{{.SSLCheck.DNSDetail}}</div>
+              {{end}}
+              {{if not .SSLCheck.Port80OK}}
+              <div class="text-secondary mt-1" style="font-size:.72rem;">{{.SSLCheck.Port80Detail}}</div>
+              {{end}}
+            </div>
+
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-secondary btn-sm" onclick="recheckSSL()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Reverificar
+              </button>
+              {{if .SSLCheck.AllOK}}
+              <button class="btn btn-success btn-sm" onclick="enableSSL()">
+                <i class="bi bi-shield-lock me-1"></i>Activar SSL
+              </button>
+              {{end}}
+            </div>
+
+            <div class="mt-3">
+              <button class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="collapse" data-bs-target="#upload-cert">
+                <i class="bi bi-upload me-1"></i>Subir certificado propio
+              </button>
+              <div class="collapse mt-2" id="upload-cert">
+                <form id="form-cert" onsubmit="uploadCert(event)">
+                  <div class="mb-2">
+                    <label class="form-label text-secondary small">Archivo .crt</label>
+                    <input type="file" class="form-control form-control-sm bg-dark border-secondary text-white" name="cert" accept=".crt,.pem" />
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label text-secondary small">Archivo .key</label>
+                    <input type="file" class="form-control form-control-sm bg-dark border-secondary text-white" name="key" accept=".key,.pem" />
+                  </div>
+                  <button type="submit" class="btn btn-purple btn-sm w-100">Subir certificado</button>
+                </form>
+              </div>
+            </div>
+            {{else}}
+            <p class="text-secondary small">Configura un dominio para poder activar SSL.</p>
+            {{end}}
+            {{end}}
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="card">
+          <div class="card-header px-4 py-3">
+            <h6 class="mb-0 fw-semibold"><i class="bi bi-info-circle me-2"></i>Información</h6>
+          </div>
+          <div class="card-body p-4">
+            <dl class="row mb-0" style="font-size:.82rem;">
+              <dt class="col-5 text-secondary fw-normal">ID</dt>
+              <dd class="col-7 text-light font-monospace">{{.Product.ID}}</dd>
+              <dt class="col-5 text-secondary fw-normal">Versión</dt>
+              <dd class="col-7 text-light">{{.Product.Version}}</dd>
+              <dt class="col-5 text-secondary fw-normal">Directorio</dt>
+              <dd class="col-7 text-light font-monospace" style="font-size:.72rem; word-break:break-all;">{{.Product.BasePath}}</dd>
+              <dt class="col-5 text-secondary fw-normal">Dominio</dt>
+              <dd class="col-7 text-light">{{if .Product.Domain}}{{.Product.Domain}}{{else}}—{{end}}</dd>
+            </dl>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de actualización -->
+<div class="modal fade" id="modal-update" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background:#1c1c26;border-color:#2a2a35;">
+      <div class="modal-header border-secondary">
+        <h6 class="modal-title fw-semibold">Actualizar {{.Product.Name}}</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="log-terminal" id="update-log" style="height:250px;"></div>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-warning btn-sm" id="btn-start-update" onclick="startUpdate()">
+          <i class="bi bi-arrow-up-circle me-1"></i>Iniciar actualización
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+const PRODUCT_ID = '{{.Product.ID}}';
+const PRODUCT_PATH = '{{.Product.BasePath}}';
+let logsWS = null;
+let logsConnected = false;
+
+async function stopProduct() {
+  if (!confirm('¿Detener el producto?')) return;
+  await fetch(`/api/products/${PRODUCT_ID}/stop`, {method:'POST'});
+  location.reload();
+}
+
+async function startProduct() {
+  await fetch(`/api/products/${PRODUCT_ID}/start`, {method:'POST'});
+  setTimeout(() => location.reload(), 2000);
+}
+
+async function removeProduct() {
+  if (!confirm('¿Eliminar el producto? Esta acción detendrá todos los contenedores.')) return;
+  if (!confirm('¿Estás seguro? Se eliminarán los contenedores (los datos en ./data se conservan).')) return;
+  await fetch(`/api/products/${PRODUCT_ID}`, {method:'DELETE'});
+  window.location.href = '/dashboard';
+}
+
+function toggleLogs() {
+  const logEl = document.getElementById('log-output');
+  const btn = document.getElementById('btn-logs');
+
+  if (logsConnected) {
+    if (logsWS) logsWS.close();
+    logsConnected = false;
+    btn.innerHTML = '<i class="bi bi-play me-1"></i>Conectar';
+    return;
+  }
+
+  logEl.innerHTML = '';
+  logsWS = new WebSocket(`ws://${location.host}/ws/logs/${PRODUCT_ID}`);
+  logsConnected = true;
+  btn.innerHTML = '<i class="bi bi-stop me-1"></i>Desconectar';
+
+  logsWS.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    const div = document.createElement('div');
+    div.className = 'log-' + (msg.level || 'info');
+    div.textContent = msg.message;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+
+  logsWS.onclose = () => {
+    logsConnected = false;
+    btn.innerHTML = '<i class="bi bi-play me-1"></i>Conectar';
+  };
+}
+
+function recheckSSL() {
+  fetch(`/api/products/${PRODUCT_ID}/ssl/check`, {method:'POST'})
+    .then(r => r.json())
+    .then(() => location.reload());
+}
+
+function enableSSL() {
+  if (!confirm('¿Activar SSL con Let\'s Encrypt? Se solicitará un certificado gratuito.')) return;
+  const es = new EventSource(`/api/products/${PRODUCT_ID}/ssl/enable`);
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.line === '__done__') { es.close(); location.reload(); }
+  };
+}
+
+function uploadCert(e) {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  fetch(`/api/products/${PRODUCT_ID}/ssl/upload`, {method:'POST', body:form})
+    .then(r => r.json())
+    .then(d => { if (d.ok) location.reload(); });
+}
+
+function openUpdateModal() {
+  document.getElementById('update-log').innerHTML = '';
+  new bootstrap.Modal(document.getElementById('modal-update')).show();
+}
+
+function startUpdate() {
+  const logEl = document.getElementById('update-log');
+  document.getElementById('btn-start-update').disabled = true;
+  const ws = new WebSocket(`ws://${location.host}/ws/update/${PRODUCT_ID}`);
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    const div = document.createElement('div');
+    div.className = 'log-' + (msg.level || 'info');
+    div.textContent = msg.message;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+    if (msg.type === 'done') setTimeout(() => location.reload(), 2000);
+  };
+}
+</script>
+
+<style>
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .animate-pulse { animation: pulse 2s ease-in-out infinite; }
+</style>
+{{end}}

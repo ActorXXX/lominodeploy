@@ -1,0 +1,452 @@
+{{template "layout" .}}
+
+{{define "title"}}Instalar {{.Product.Name}} — LominoDeploy{{end}}
+
+{{define "body"}}
+{{template "sidebar" (dict "Version" .Version "Page" "catalog")}}
+
+<div class="main-content">
+  <div class="topbar d-flex align-items-center gap-3">
+    <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Volver
+    </a>
+    <div>
+      <h6 class="mb-0 fw-semibold text-white">Instalar {{.Product.Name}}</h6>
+      <small class="text-secondary">{{.Product.Tagline}}</small>
+    </div>
+  </div>
+
+  <div class="p-4" style="max-width:720px;">
+
+    <!-- Stepper horizontal -->
+    <div class="d-flex align-items-center gap-2 mb-5" id="stepper">
+      {{$steps := list "Sistema" "Configuración" "Licencia" "Resumen" "Despliegue"}}
+      {{range $i, $s := $steps}}
+      <div class="step-item {{if eq $i 0}}active{{end}}" data-step="{{add $i 1}}">
+        <div class="step-circle">{{add $i 1}}</div>
+        <div class="step-label">{{$s}}</div>
+      </div>
+      {{if lt $i 4}}<div class="step-line flex-grow-1"></div>{{end}}
+      {{end}}
+    </div>
+
+    <!-- STEP 1 — System Check -->
+    <div id="step-1" class="step-content">
+      <div class="card mb-3">
+        <div class="card-header px-4 py-3">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-cpu me-2"></i>Requisitos del sistema</h6>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-secondary small mb-3">
+            Verificando que el servidor cumple los requisitos mínimos de <strong class="text-white">{{.Product.Name}}</strong>:
+            {{.Product.MinRAMGB}} GB RAM · {{.Product.MinDiskGB}} GB disco ·
+            Puertos: {{range $i, $p := .Product.RequiredPorts}}{{if $i}}, {{end}}{{$p}}{{end}}
+          </p>
+          <div id="sys-checks" class="text-center py-3 text-secondary">
+            <div class="spinner-border spinner-border-sm me-2"></div>Verificando...
+          </div>
+          <div id="sys-alert" class="mt-3" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-end">
+        <button id="btn-step1-next" class="btn btn-purple px-4" disabled>
+          Continuar <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2 — Configuración -->
+    <div id="step-2" class="step-content" style="display:none;">
+      <div class="card mb-3">
+        <div class="card-header px-4 py-3">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-sliders me-2"></i>Parámetros de instalación</h6>
+        </div>
+        <div class="card-body p-4">
+
+          <!-- Ruta de instalación -->
+          <div class="mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+            <label class="form-label text-light small fw-medium">Ruta de instalación</label>
+            <input type="text" class="form-control form-control-sm bg-dark border-secondary text-white font-monospace"
+                   id="base-path" value="/opt/lominodev/{{.Product.ID}}" />
+            <div class="form-text">Directorio donde se instalarán los archivos del producto.</div>
+          </div>
+
+          <!-- SSL -->
+          <div class="mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+            <label class="form-label text-light small fw-medium">Configuración SSL</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="ssl-mode" id="ssl-none" value="none" checked>
+                <label class="form-check-label small" for="ssl-none">
+                  <strong class="text-white">Sin SSL</strong><br>
+                  <span class="text-secondary">HTTP en IP o dominio. Puedes activar SSL más adelante.</span>
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="ssl-mode" id="ssl-le" value="letsencrypt">
+                <label class="form-check-label small" for="ssl-le">
+                  <strong class="text-white">Let's Encrypt</strong><br>
+                  <span class="text-secondary">Requiere dominio con DNS apuntando a este servidor y puerto 80 accesible.</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Parámetros del producto -->
+          <div id="params-form"></div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-between">
+        <button class="btn btn-outline-secondary btn-sm" onclick="goStep(1)">
+          <i class="bi bi-arrow-left me-1"></i>Atrás
+        </button>
+        <button class="btn btn-purple px-4" onclick="goStep(3)">
+          Continuar <i class="bi bi-arrow-right ms-1"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 3 — Licencia -->
+    <div id="step-3" class="step-content" style="display:none;">
+      <div class="card mb-3">
+        <div class="card-header px-4 py-3">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-key me-2"></i>Clave de licencia</h6>
+        </div>
+        <div class="card-body p-4">
+          <p class="text-secondary small mb-4">
+            Ingresa el código de licencia que recibiste al adquirir <strong class="text-white">{{.Product.Name}}</strong>.
+          </p>
+          <div class="mb-3">
+            <label class="form-label text-light small">License Code</label>
+            <input type="text" class="form-control bg-dark border-secondary text-white font-monospace text-uppercase letter-spacing-1"
+                   id="license-key" placeholder="LDEV-XXXX-XXXX-XXXX-XXXX"
+                   style="letter-spacing:.1em;" />
+          </div>
+          <div id="license-result" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-between">
+        <button class="btn btn-outline-secondary btn-sm" onclick="goStep(2)">
+          <i class="bi bi-arrow-left me-1"></i>Atrás
+        </button>
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-secondary btn-sm" onclick="goStep(4)">
+            Validar y continuar <i class="bi bi-arrow-right ms-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 — Resumen -->
+    <div id="step-4" class="step-content" style="display:none;">
+      <div class="card mb-3">
+        <div class="card-header px-4 py-3">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-card-checklist me-2"></i>Resumen de instalación</h6>
+        </div>
+        <div class="card-body p-4">
+          <div id="summary-content"></div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-between">
+        <button class="btn btn-outline-secondary btn-sm" onclick="goStep(3)">
+          <i class="bi bi-arrow-left me-1"></i>Editar parámetros
+        </button>
+        <button class="btn btn-success px-5 fw-semibold" onclick="startDeploy()">
+          <i class="bi bi-play-fill me-1"></i>Iniciar despliegue
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 5 — Despliegue -->
+    <div id="step-5" class="step-content" style="display:none;">
+      <div class="card mb-3">
+        <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-terminal me-2"></i>Despliegue en progreso</h6>
+          <div id="deploy-status-badge"></div>
+        </div>
+        <div class="card-body p-4">
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small text-secondary mb-1">
+              <span id="deploy-label">Iniciando...</span>
+              <span id="deploy-pct">0%</span>
+            </div>
+            <div class="progress" style="height:6px;">
+              <div class="progress-bar bg-purple" id="deploy-progress" style="width:0%;transition:width .5s;"></div>
+            </div>
+          </div>
+          <div class="log-terminal" id="deploy-log"></div>
+        </div>
+      </div>
+      <div id="deploy-footer" style="display:none;">
+        <div class="alert alert-success d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-check-circle-fill fs-5"></i>
+          <div>
+            <strong>{{.Product.Name}} instalado correctamente.</strong>
+            Puedes acceder desde el panel principal.
+          </div>
+        </div>
+        <a href="/dashboard" class="btn btn-purple">
+          <i class="bi bi-grid me-2"></i>Ir al panel principal
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+const PRODUCT = {{.Product | jsonify}};
+let params = {};
+let licenseData = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildParamsForm();
+  runSysCheck();
+});
+
+function goStep(n) {
+  document.querySelectorAll('.step-content').forEach(el => el.style.display = 'none');
+  document.getElementById('step-' + n).style.display = '';
+  document.querySelectorAll('.step-item').forEach((el, i) => {
+    el.classList.remove('active','done');
+    if (i + 1 < n) el.classList.add('done');
+    if (i + 1 === n) el.classList.add('active');
+  });
+  if (n === 4) buildSummary();
+}
+
+async function runSysCheck() {
+  const resp = await fetch('/api/system/check', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      min_ram_gb: PRODUCT.min_ram_gb,
+      min_disk_gb: PRODUCT.min_disk_gb,
+      required_ports: PRODUCT.required_ports
+    })
+  });
+  const data = await resp.json();
+  renderChecks('sys-checks', data.checks);
+
+  const btn = document.getElementById('btn-step1-next');
+  if (data.overall === 'error') {
+    showAlert('sys-alert','danger','Hay errores críticos que deben resolverse antes de continuar.');
+  } else {
+    btn.disabled = false;
+    btn.onclick = () => goStep(2);
+    if (data.overall === 'warn') {
+      showAlert('sys-alert','warning','Hay advertencias. Puedes continuar con precaución.');
+    }
+  }
+}
+
+function buildParamsForm() {
+  const container = document.getElementById('params-form');
+  let currentGroup = null;
+  let html = '';
+
+  (PRODUCT.parameters || []).forEach(p => {
+    if (p.group && p.group !== currentGroup) {
+      if (currentGroup) html += '</div>';
+      currentGroup = p.group;
+      html += `<div class="mt-4 pt-3 border-top border-secondary border-opacity-25">
+        <p class="text-secondary small fw-medium text-uppercase mb-3" style="letter-spacing:.08em;">${p.group}</p>`;
+    }
+
+    const required = p.required ? '<span class="text-danger ms-1">*</span>' : '';
+    html += `<div class="mb-3">
+      <label class="form-label text-light small fw-medium">${p.label}${required}</label>`;
+
+    if (p.type === 'select') {
+      html += `<select class="form-select form-select-sm bg-dark border-secondary text-white" id="p-${p.id}">
+        ${(p.options||[]).map(o => `<option ${o===p.default?'selected':''}>${o}</option>`).join('')}
+      </select>`;
+    } else if (p.type === 'boolean') {
+      html += `<div class="form-check form-switch mt-1">
+        <input class="form-check-input" type="checkbox" id="p-${p.id}" ${p.default?'checked':''}>
+      </div>`;
+    } else if (p.type === 'password') {
+      html += `<div class="input-group input-group-sm">
+        <input type="password" class="form-control bg-dark border-secondary text-white font-monospace"
+               id="p-${p.id}" placeholder="${p.generated ? 'Dejar vacío para generar automáticamente' : ''}" />
+        <button class="btn btn-outline-secondary" type="button" onclick="togglePwd('p-${p.id}')">
+          <i class="bi bi-eye"></i>
+        </button>
+        ${p.generated ? `<button class="btn btn-outline-secondary" type="button" onclick="genPwd('p-${p.id}')"><i class="bi bi-dice-5"></i></button>` : ''}
+      </div>`;
+    } else {
+      html += `<input type="${p.type}" class="form-control form-control-sm bg-dark border-secondary text-white"
+               id="p-${p.id}" placeholder="${p.placeholder||''}" value="${p.default||''}" />`;
+    }
+
+    if (p.tooltip) {
+      html += `<div class="form-text text-secondary">${p.tooltip}</div>`;
+    }
+    html += `</div>`;
+  });
+
+  if (currentGroup) html += '</div>';
+  container.innerHTML = html;
+}
+
+function collectParams() {
+  const result = {};
+  (PRODUCT.parameters || []).forEach(p => {
+    const el = document.getElementById('p-' + p.id);
+    if (!el) return;
+    if (p.type === 'boolean') {
+      result[p.id] = el.checked ? 'true' : 'false';
+    } else {
+      result[p.id] = el.value;
+    }
+    if (!result[p.id] && p.generated) {
+      result[p.id] = generatePassword();
+    }
+  });
+  result['ENABLE_SSL'] = document.querySelector('input[name="ssl-mode"]:checked')?.value === 'letsencrypt' ? 'true' : 'false';
+  return result;
+}
+
+function buildSummary() {
+  params = collectParams();
+  const basePath = document.getElementById('base-path').value;
+  const sslMode = document.querySelector('input[name="ssl-mode"]:checked')?.value;
+  const lk = document.getElementById('license-key').value;
+
+  const rows = Object.entries(params).map(([k, v]) => {
+    const param = (PRODUCT.parameters||[]).find(p=>p.id===k);
+    const display = param?.type === 'password' ? '••••••••' : v;
+    return `<tr><td class="text-secondary small py-1">${param?.label || k}</td>
+                <td class="text-light small font-monospace py-1">${display || '—'}</td></tr>`;
+  }).join('');
+
+  document.getElementById('summary-content').innerHTML = `
+    <div class="table-responsive">
+      <table class="table table-sm table-dark mb-0">
+        <tbody>
+          <tr><td class="text-secondary small py-1">Producto</td><td class="text-white fw-semibold py-1">${PRODUCT.name}</td></tr>
+          <tr><td class="text-secondary small py-1">Ruta</td><td class="text-light font-monospace small py-1">${basePath}</td></tr>
+          <tr><td class="text-secondary small py-1">SSL</td><td class="text-light small py-1">${sslMode === 'letsencrypt' ? 'Let\'s Encrypt' : 'Sin SSL (HTTP)'}</td></tr>
+          <tr><td class="text-secondary small py-1">Licencia</td><td class="text-success font-monospace small py-1">${lk || '—'}</td></tr>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 p-3 rounded" style="background:#0a0a0f;">
+      <p class="text-secondary small mb-2 fw-medium">Comandos a ejecutar:</p>
+      ${(PRODUCT.deploy_commands||[]).map(c =>
+        `<div class="font-monospace text-secondary" style="font-size:.75rem;"><span style="color:#4b5563;">$</span> ${c}</div>`
+      ).join('')}
+    </div>`;
+}
+
+function startDeploy() {
+  params = collectParams();
+  goStep(5);
+
+  const logEl = document.getElementById('deploy-log');
+  const ws = new WebSocket(`ws://${location.host}/ws/deploy/${PRODUCT.id}`);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({
+      product_id: PRODUCT.id,
+      license_key: document.getElementById('license-key').value.trim().toUpperCase(),
+      base_path: document.getElementById('base-path').value,
+      params: params
+    }));
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'log') {
+      const div = document.createElement('div');
+      div.className = 'log-' + (msg.level || 'info');
+      div.textContent = msg.message;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    } else if (msg.type === 'progress') {
+      const pct = Math.round(msg.step / msg.total * 100);
+      document.getElementById('deploy-progress').style.width = pct + '%';
+      document.getElementById('deploy-label').textContent = msg.label;
+      document.getElementById('deploy-pct').textContent = pct + '%';
+    } else if (msg.type === 'done') {
+      if (msg.success) {
+        document.getElementById('deploy-status-badge').innerHTML =
+          '<span class="badge bg-success"><i class="bi bi-check me-1"></i>Completado</span>';
+        document.getElementById('deploy-footer').style.display = '';
+        document.getElementById('deploy-progress').style.width = '100%';
+      } else {
+        document.getElementById('deploy-status-badge').innerHTML =
+          '<span class="badge bg-danger"><i class="bi bi-x me-1"></i>Error</span>';
+        const div = document.createElement('div');
+        div.className = 'log-error';
+        div.textContent = '✗ ' + (msg.message || 'Error en el despliegue');
+        logEl.appendChild(div);
+      }
+    } else if (msg.type === 'error') {
+      const div = document.createElement('div');
+      div.className = 'log-error';
+      div.textContent = '✗ ' + msg.message;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+  };
+}
+
+function togglePwd(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function genPwd(id) {
+  document.getElementById(id).value = generatePassword();
+}
+
+function generatePassword(n = 20) {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+  const arr = new Uint8Array(n);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => chars[b % chars.length]).join('');
+}
+
+function renderChecks(id, checks) {
+  const el = document.getElementById(id);
+  const icons = {ok:'check-circle-fill text-success', warn:'exclamation-triangle-fill text-warning', error:'x-circle-fill text-danger'};
+  el.innerHTML = checks.map(c => `
+    <div class="d-flex align-items-start gap-3 py-2 border-bottom border-secondary border-opacity-10">
+      <i class="bi bi-${icons[c.status]} mt-1 flex-shrink-0"></i>
+      <div class="flex-grow-1">
+        <div class="d-flex justify-content-between">
+          <span class="text-light small">${c.label}</span>
+          <span class="text-secondary small font-monospace">${c.value}</span>
+        </div>
+        ${c.detail ? `<div class="text-secondary" style="font-size:.73rem;">${c.detail}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+function showAlert(id, type, msg) {
+  const el = document.getElementById(id);
+  el.style.display = '';
+  el.innerHTML = `<div class="alert alert-${type} py-2 small mb-0">${msg}</div>`;
+}
+</script>
+
+<style>
+  .bg-purple { background-color: #7c3aed !important; }
+  .step-item { text-align: center; min-width: 60px; }
+  .step-circle {
+    width:32px; height:32px; border-radius:50%; margin: 0 auto 4px;
+    background:#2a2a35; color:#6b7280;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:600; font-size:.8rem;
+    border: 2px solid #2a2a35; transition: all .3s;
+  }
+  .step-item.active .step-circle { background:#7c3aed; color:#fff; border-color:#7c3aed; }
+  .step-item.done .step-circle   { background:#16a34a; color:#fff; border-color:#16a34a; }
+  .step-label { font-size:.7rem; color:#6b7280; white-space:nowrap; }
+  .step-item.active .step-label, .step-item.done .step-label { color:#d1d5db; }
+  .step-line { height:2px; background:#2a2a35; flex:1; margin-top:16px; }
+</style>
+{{end}}

@@ -1,0 +1,222 @@
+{{template "layout" .}}
+
+{{define "title"}}Dashboard — LominoDeploy{{end}}
+
+{{define "body"}}
+{{template "sidebar" (dict "Version" .Version "Page" "dashboard")}}
+
+<div class="main-content">
+  <!-- Topbar -->
+  <div class="topbar d-flex align-items-center justify-content-between">
+    <div>
+      <h6 class="mb-0 fw-semibold text-white">Dashboard</h6>
+      <small class="text-secondary">Gestión de productos instalados</small>
+    </div>
+    <div id="update-area"></div>
+  </div>
+
+  <div class="p-4">
+
+    <!-- Stats del sistema -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-secondary small">CPU</span>
+            <i class="bi bi-cpu text-secondary"></i>
+          </div>
+          <div class="fw-bold text-white fs-5" id="stat-cpu">—%</div>
+          <div class="progress mt-2" style="height:4px;">
+            <div class="progress-bar bg-purple" id="bar-cpu" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-secondary small">RAM</span>
+            <i class="bi bi-memory text-secondary"></i>
+          </div>
+          <div class="fw-bold text-white fs-5" id="stat-ram">—</div>
+          <div class="progress mt-2" style="height:4px;">
+            <div class="progress-bar" id="bar-ram" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-secondary small">Disco libre</span>
+            <i class="bi bi-hdd text-secondary"></i>
+          </div>
+          <div class="fw-bold text-white fs-5" id="stat-disk">—</div>
+          <div class="progress mt-2" style="height:4px;">
+            <div class="progress-bar bg-info" id="bar-disk" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="text-secondary small">Productos</span>
+            <i class="bi bi-box-seam text-secondary"></i>
+          </div>
+          <div class="fw-bold text-white fs-5">{{len .Products}}</div>
+          <div class="text-secondary mt-1" style="font-size:.75rem;">instalados</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Título productos -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h6 class="fw-semibold text-white mb-0">Productos instalados</h6>
+      <a href="/products/install" class="btn btn-purple btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Instalar producto
+      </a>
+    </div>
+
+    <!-- Cards de productos -->
+    {{if .Products}}
+    <div class="row g-3">
+      {{range .Products}}
+      <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-start justify-content-between mb-3">
+              <div>
+                <h6 class="fw-bold text-white mb-1">{{.Name}}</h6>
+                <code class="text-secondary" style="font-size:.75rem;">v{{.Version}}</code>
+              </div>
+              {{if eq .Status "running"}}
+                <span class="badge badge-running rounded-pill"><i class="bi bi-circle-fill me-1" style="font-size:.5rem;"></i>Activo</span>
+              {{else}}
+                <span class="badge badge-stopped rounded-pill"><i class="bi bi-circle-fill me-1" style="font-size:.5rem;"></i>Detenido</span>
+              {{end}}
+            </div>
+
+            {{if .Domain}}
+            <div class="mb-2">
+              <span class="text-secondary small"><i class="bi bi-globe me-1"></i></span>
+              {{if .SSLEnabled}}
+                <a href="https://{{.Domain}}" target="_blank" class="text-info small">https://{{.Domain}}</a>
+              {{else}}
+                <a href="http://{{.Domain}}" target="_blank" class="text-secondary small">http://{{.Domain}}</a>
+              {{end}}
+            </div>
+            {{end}}
+
+            {{if not .SSLEnabled}}
+            <div class="d-flex align-items-center gap-1 mb-3" style="font-size:.75rem;">
+              <i class="bi bi-shield-exclamation text-warning"></i>
+              <span class="text-warning">Sin SSL</span>
+            </div>
+            {{else}}
+            <div class="d-flex align-items-center gap-1 mb-3" style="font-size:.75rem;">
+              <i class="bi bi-shield-fill-check text-success"></i>
+              <span class="text-success">SSL activo</span>
+            </div>
+            {{end}}
+
+            <div class="d-flex gap-2 mt-auto">
+              <a href="/products/{{.ID}}" class="btn btn-outline-secondary btn-sm flex-grow-1">
+                <i class="bi bi-sliders me-1"></i>Gestionar
+              </a>
+              {{if eq .Status "running"}}
+              <button class="btn btn-outline-danger btn-sm" onclick="stopProduct('{{.ID}}')">
+                <i class="bi bi-stop-fill"></i>
+              </button>
+              {{else}}
+              <button class="btn btn-outline-success btn-sm" onclick="startProduct('{{.ID}}')">
+                <i class="bi bi-play-fill"></i>
+              </button>
+              {{end}}
+            </div>
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+    {{else}}
+    <!-- Estado vacío -->
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-box-seam text-secondary" style="font-size:3rem;"></i>
+        <h6 class="text-white mt-3 mb-2">No hay productos instalados</h6>
+        <p class="text-secondary small mb-4">Instala tu primer producto LominoDev para comenzar.</p>
+        <a href="/products/install" class="btn btn-purple">
+          <i class="bi bi-plus-lg me-1"></i>Instalar primer producto
+        </a>
+      </div>
+    </div>
+    {{end}}
+
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+function pollStats() {
+  fetch('/api/system/stats').then(r => r.json()).then(d => {
+    const cpu = Math.round(d.cpu_percent || 0);
+    document.getElementById('stat-cpu').textContent = cpu + '%';
+    document.getElementById('bar-cpu').style.width = cpu + '%';
+    document.getElementById('bar-cpu').className = 'progress-bar ' +
+      (cpu > 80 ? 'bg-danger' : cpu > 60 ? 'bg-warning' : 'bg-success');
+
+    const ramUsed = (d.ram_used_gb || 0).toFixed(1);
+    const ramTotal = (d.ram_total_gb || 0).toFixed(1);
+    document.getElementById('stat-ram').textContent = ramUsed + ' / ' + ramTotal + ' GB';
+    const ramPct = ramTotal > 0 ? Math.round(ramUsed / ramTotal * 100) : 0;
+    document.getElementById('bar-ram').style.width = ramPct + '%';
+    document.getElementById('bar-ram').className = 'progress-bar ' +
+      (ramPct > 85 ? 'bg-danger' : ramPct > 65 ? 'bg-warning' : 'bg-info');
+
+    document.getElementById('stat-disk').textContent = (d.disk_free_gb || 0).toFixed(0) + ' GB libres';
+    const diskTotal = d.disk_total_gb || 1;
+    const diskUsed = diskTotal - (d.disk_free_gb || 0);
+    document.getElementById('bar-disk').style.width = Math.round(diskUsed / diskTotal * 100) + '%';
+  }).catch(() => {});
+}
+
+function checkUpdates() {
+  fetch('/api/updater/check').then(r => r.json()).then(d => {
+    if (d.update_available) {
+      document.getElementById('update-area').innerHTML =
+        `<button class="btn btn-warning btn-sm" onclick="applyUpdate()">
+          <i class="bi bi-arrow-up-circle me-1"></i>Actualizar a v${d.latest}
+        </button>`;
+    }
+  }).catch(() => {});
+}
+
+function applyUpdate() {
+  if (!confirm('¿Actualizar LominoDeploy? El servicio se reiniciará.')) return;
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Actualizando...';
+  fetch('/api/updater/apply', {method:'POST'}).then(() => {
+    btn.textContent = 'Reiniciando...';
+    setTimeout(() => location.reload(), 8000);
+  });
+}
+
+async function stopProduct(id) {
+  if (!confirm('¿Detener el producto?')) return;
+  await fetch(`/api/products/${id}/stop`, {method:'POST'});
+  location.reload();
+}
+
+async function startProduct(id) {
+  await fetch(`/api/products/${id}/start`, {method:'POST'});
+  location.reload();
+}
+
+pollStats();
+setInterval(pollStats, 5000);
+checkUpdates();
+</script>
+
+<style>
+  .bg-purple { background-color: #7c3aed !important; }
+</style>
+{{end}}

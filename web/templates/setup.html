@@ -1,0 +1,243 @@
+{{template "layout" .}}
+
+{{define "title"}}Configuración inicial — LominoDeploy{{end}}
+
+{{define "body"}}
+<div class="min-vh-100 d-flex align-items-center justify-content-center" style="background:#0f0f14;">
+<div class="w-100" style="max-width:600px; padding:2rem 1rem;">
+
+  <!-- Logo -->
+  <div class="text-center mb-5">
+    <div class="d-inline-flex align-items-center justify-content-center rounded-3 mb-3"
+         style="width:56px;height:56px;background:#7c3aed;font-size:1.5rem;font-weight:700;color:#fff;">L</div>
+    <h1 class="h3 fw-bold text-white">Bienvenido a LominoDeploy</h1>
+    <p class="text-secondary">Configuración inicial del agente de despliegue</p>
+  </div>
+
+  <!-- Stepper -->
+  <div class="d-flex align-items-center justify-content-center gap-3 mb-5" id="stepper">
+    <div class="step-item active" data-step="1">
+      <div class="step-circle">1</div><div class="step-label">Sistema</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="2">
+      <div class="step-circle">2</div><div class="step-label">Docker</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step-item" data-step="3">
+      <div class="step-circle">3</div><div class="step-label">Listo</div>
+    </div>
+  </div>
+
+  <!-- STEP 1 — System Check -->
+  <div id="step-1" class="step-content">
+    <div class="card">
+      <div class="card-header px-4 py-3">
+        <h5 class="mb-0 fw-semibold"><i class="bi bi-cpu me-2 text-purple"></i>Verificación del sistema</h5>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-secondary small mb-4">Verificando que el servidor cumple los requisitos mínimos para ejecutar LominoDeploy.</p>
+        <div id="sys-checks">
+          <div class="text-center py-4 text-secondary">
+            <div class="spinner-border spinner-border-sm me-2"></div>Verificando sistema...
+          </div>
+        </div>
+        <div id="sys-alert" class="mt-3" style="display:none;"></div>
+        <div class="d-flex justify-content-end mt-4">
+          <button id="btn-sys-next" class="btn btn-purple px-4" disabled>
+            Continuar <i class="bi bi-arrow-right ms-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 — Docker -->
+  <div id="step-2" class="step-content" style="display:none;">
+    <div class="card">
+      <div class="card-header px-4 py-3">
+        <h5 class="mb-0 fw-semibold"><i class="bi bi-box me-2"></i>Verificación de Docker</h5>
+      </div>
+      <div class="card-body p-4">
+        <div id="docker-checks">
+          <div class="text-center py-4 text-secondary">
+            <div class="spinner-border spinner-border-sm me-2"></div>Verificando Docker...
+          </div>
+        </div>
+        <div id="docker-install-section" style="display:none;">
+          <hr class="border-secondary"/>
+          <p class="text-warning small"><i class="bi bi-exclamation-triangle me-1"></i>Docker no está instalado. ¿Deseas instalarlo automáticamente?</p>
+          <button id="btn-install-docker" class="btn btn-purple btn-sm me-2">
+            <i class="bi bi-download me-1"></i>Instalar Docker automáticamente
+          </button>
+          <div id="docker-install-log" class="log-terminal mt-3" style="display:none; height:200px;"></div>
+        </div>
+        <div class="d-flex justify-content-between mt-4">
+          <button class="btn btn-outline-secondary btn-sm" onclick="goStep(1)">
+            <i class="bi bi-arrow-left me-1"></i>Atrás
+          </button>
+          <button id="btn-docker-next" class="btn btn-purple px-4" disabled>
+            Continuar <i class="bi bi-arrow-right ms-1"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 — Done -->
+  <div id="step-3" class="step-content" style="display:none;">
+    <div class="card text-center">
+      <div class="card-body p-5">
+        <div class="mb-4" style="font-size:3rem;">✅</div>
+        <h4 class="fw-bold text-white mb-2">LominoDeploy está listo</h4>
+        <p class="text-secondary mb-4">El agente de despliegue está configurado y funcionando. Ahora puedes instalar los productos LominoDev en este servidor.</p>
+        <button class="btn btn-purple btn-lg px-5" onclick="completeSetup()">
+          <i class="bi bi-grid me-2"></i>Ir al panel principal
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<style>
+  .text-purple { color: #8b5cf6; }
+  .step-item { text-align: center; }
+  .step-circle {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #2a2a35; color: #6b7280;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: .875rem; margin: 0 auto 4px;
+    border: 2px solid #2a2a35;
+    transition: all .3s;
+  }
+  .step-item.active .step-circle { background: #7c3aed; color: #fff; border-color: #7c3aed; }
+  .step-item.done .step-circle   { background: #16a34a; color: #fff; border-color: #16a34a; }
+  .step-label { font-size: .75rem; color: #6b7280; }
+  .step-item.active .step-label, .step-item.done .step-label { color: #d1d5db; }
+  .step-line { flex: 1; height: 2px; background: #2a2a35; max-width: 60px; }
+</style>
+{{end}}
+
+{{define "scripts"}}
+<script>
+let currentStep = 1;
+let sysOK = false;
+let dockerOK = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+  runSysCheck();
+});
+
+function goStep(n) {
+  document.querySelectorAll('.step-content').forEach(el => el.style.display = 'none');
+  document.getElementById('step-' + n).style.display = '';
+  document.querySelectorAll('.step-item').forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    if (i + 1 < n) el.classList.add('done');
+    if (i + 1 === n) el.classList.add('active');
+  });
+  currentStep = n;
+  if (n === 2 && !dockerOK) runDockerCheck();
+}
+
+async function runSysCheck() {
+  const resp = await fetch('/api/system/check', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({min_ram_gb: 1, min_disk_gb: 5, required_ports: []})
+  });
+  const data = await resp.json();
+  renderChecks('sys-checks', data.checks);
+
+  if (data.overall === 'error') {
+    showAlert('sys-alert', 'danger', 'Hay errores críticos. Resuélvelos antes de continuar.');
+  } else if (data.overall === 'warn') {
+    showAlert('sys-alert', 'warning', 'Hay advertencias. Puedes continuar, pero revisa los ítems marcados.');
+    document.getElementById('btn-sys-next').disabled = false;
+  } else {
+    sysOK = true;
+    document.getElementById('btn-sys-next').disabled = false;
+  }
+  document.getElementById('btn-sys-next').onclick = () => goStep(2);
+}
+
+async function runDockerCheck() {
+  const resp = await fetch('/api/docker/check', {method:'POST'});
+  const data = await resp.json();
+
+  if (!data.installed) {
+    document.getElementById('docker-checks').innerHTML = renderCheck({
+      status:'error', label:'Docker instalado', value:'No encontrado'
+    });
+    document.getElementById('docker-install-section').style.display = '';
+    document.getElementById('btn-install-docker').onclick = installDocker;
+    return;
+  }
+
+  renderChecks('docker-checks', data.checks || []);
+  if (data.overall !== 'error') {
+    dockerOK = true;
+    document.getElementById('btn-docker-next').disabled = false;
+    document.getElementById('btn-docker-next').onclick = () => goStep(3);
+  }
+}
+
+function installDocker() {
+  const logEl = document.getElementById('docker-install-log');
+  logEl.style.display = '';
+  logEl.innerHTML = '';
+  document.getElementById('btn-install-docker').disabled = true;
+
+  const es = new EventSource('/api/docker/install');
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.line === '__done__') {
+      es.close();
+      runDockerCheck();
+      return;
+    }
+    const div = document.createElement('div');
+    div.className = 'log-' + (msg.level || 'info');
+    div.textContent = msg.line;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+}
+
+async function completeSetup() {
+  await fetch('/api/setup/complete', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({port: 8888})
+  });
+  window.location.href = '/dashboard';
+}
+
+function renderChecks(containerId, checks) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = checks.map(renderCheck).join('');
+}
+
+function renderCheck(c) {
+  const icons = {ok:'check-circle-fill text-success', warn:'exclamation-triangle-fill text-warning', error:'x-circle-fill text-danger'};
+  return `<div class="d-flex align-items-start gap-3 py-2 border-bottom border-secondary border-opacity-25">
+    <i class="bi bi-${icons[c.status] || icons.ok} mt-1 flex-shrink-0"></i>
+    <div class="flex-grow-1">
+      <div class="d-flex justify-content-between">
+        <span class="text-light small">${c.label}</span>
+        <span class="text-secondary small font-monospace">${c.value}</span>
+      </div>
+      ${c.detail ? `<div class="text-secondary" style="font-size:.75rem;">${c.detail}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function showAlert(id, type, msg) {
+  const el = document.getElementById(id);
+  el.style.display = '';
+  el.innerHTML = `<div class="alert alert-${type} py-2 small mb-0">${msg}</div>`;
+}
+</script>
+{{end}}

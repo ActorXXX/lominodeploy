@@ -1,0 +1,64 @@
+{{template "layout" .}}
+
+{{define "title"}}Instalar producto — LominoDeploy{{end}}
+
+{{define "body"}}
+{{template "sidebar" (dict "Version" .Version "Page" "catalog")}}
+
+<div class="main-content">
+  <div class="topbar d-flex align-items-center gap-3">
+    <a href="/dashboard" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Dashboard
+    </a>
+    <div>
+      <h6 class="mb-0 fw-semibold text-white">Catálogo de productos</h6>
+      <small class="text-secondary">Selecciona un producto para instalarlo en este servidor</small>
+    </div>
+  </div>
+
+  <div class="p-4" style="max-width:900px;">
+    <div class="row g-4">
+      {{range .Catalog}}
+      <div class="col-md-6">
+        <div class="card h-100">
+          <div class="card-body p-4 d-flex flex-column">
+            <div class="mb-3">
+              <h5 class="fw-bold text-white mb-1">{{.Name}}</h5>
+              <p class="text-secondary small mb-0">{{.Tagline}}</p>
+            </div>
+
+            <p class="text-secondary small flex-grow-1">{{.Description}}</p>
+
+            <div class="mb-4">
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <span class="badge bg-dark border border-secondary text-secondary small">
+                  <i class="bi bi-memory me-1"></i>{{.MinRAMGB}} GB RAM mín.
+                </span>
+                <span class="badge bg-dark border border-secondary text-secondary small">
+                  <i class="bi bi-hdd me-1"></i>{{.MinDiskGB}} GB disco mín.
+                </span>
+              </div>
+              <div class="d-flex flex-wrap gap-1">
+                {{range .RequiredPorts}}
+                <span class="badge bg-dark border border-secondary text-secondary" style="font-size:.7rem; font-family:monospace;">:{{.}}</span>
+                {{end}}
+              </div>
+            </div>
+
+            <a href="/products/install/{{.ID}}" class="btn btn-purple w-100">
+              <i class="bi bi-download me-1"></i>Instalar {{.Name}}
+            </a>
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<style>
+  .bg-purple { background-color: #7c3aed !important; }
+</style>
+{{end}}
